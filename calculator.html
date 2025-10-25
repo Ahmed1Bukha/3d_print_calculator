@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Print Cost Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .calculator { padding: 40px; }
+        .upload-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .upload-area {
+            border: 3px dashed rgba(255,255,255,0.5);
+            border-radius: 15px;
+            padding: 40px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+        }
+        .upload-icon { font-size: 4em; margin-bottom: 15px; }
+        .upload-text { color: white; font-size: 1.2em; font-weight: 600; }
+        #file-input { display: none; }
+        .file-status { margin-top: 20px; padding: 15px; border-radius: 10px; color: white; display: none; }
+        .file-status.success { background: rgba(76, 175, 80, 0.3); display: block; }
+        .file-status.error { background: rgba(244, 67, 54, 0.3); display: block; }
+        .file-status.processing { background: rgba(255, 193, 7, 0.3); display: block; }
+        .extracted-data { background: #f8f9fa; border-radius: 15px; padding: 25px; margin-bottom: 30px; display: none; }
+        .extracted-data.show { display: block; }
+        .extracted-data h3 { color: #4CAF50; margin-bottom: 20px; }
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .data-item { background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #4CAF50; }
+        .data-item label { font-size: 0.9em; color: #666; display: block; }
+        .data-item .value { font-size: 1.3em; font-weight: 700; color: #333; }
+        .input-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 30px; }
+        .input-group { background: #f8f9fa; padding: 25px; border-radius: 15px; }
+        .input-group label { display: block; font-weight: 600; margin-bottom: 8px; }
+        .input-group input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; }
+        .calculate-btn { width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 15px; font-size: 1.2em; cursor: pointer; margin-bottom: 30px; }
+        .results { background: #f8f9fa; border-radius: 15px; padding: 30px; display: none; }
+        .results.show { display: block; }
+        .cost-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .cost-item { background: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .cost-item h3 { color: #666; font-size: 0.9em; margin-bottom: 8px; }
+        .cost-item .amount { font-size: 1.5em; font-weight: 700; }
+        .total-cost { background: #FF6B6B; color: white; padding: 25px; border-radius: 15px; text-align: center; margin-bottom: 25px; }
+        .total-cost .amount { font-size: 2.5em; font-weight: 700; }
+        .pricing-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .pricing-option { background: white; padding: 20px; border-radius: 10px; text-align: center; position: relative; }
+        .pricing-option .price { font-size: 1.8em; font-weight: 700; color: #4CAF50; }
+        .recommended { border: 2px solid #4CAF50; background: #e8f5e8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>3D Print Cost Calculator</h1>
+            <p>Upload your Bambu Lab .3MF file</p>
+        </div>
+        <div class="calculator">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📤</div>
+                    <div class="upload-text">Drop your .3MF file here</div>
+                </div>
+                <input type="file" id="file-input" accept=".3mf">
+                <div class="file-status" id="fileStatus"></div>
+            </div>
+            
+            <!-- Preview Image -->
+            <div id="preview-section" style="display: none; text-align: center; margin-bottom: 30px; background: #f8f9fa; padding: 20px; border-radius: 15px;">
+                <h3 style="color: #4CAF50; margin-bottom: 15px;">📷 Print Preview</h3>
+                <img id="preview-image" style="max-width: 100%; max-height: 400px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                
+                <!-- Color Palette -->
+                <div id="color-palette" style="display: none; margin-top: 20px;">
+                    <h4 style="color: #666; margin-bottom: 15px; font-size: 1.1em;">🎨 Print Colors</h4>
+                    <div id="color-swatches" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;"></div>
+                </div>
+            </div>
+            
+            <div class="extracted-data" id="extractedData">
+                <h3>Extracted Print Data</h3>
+                <div class="data-grid">
+                    <div class="data-item">
+                        <label>Print Time</label>
+                        <div class="value" id="extracted-time">-</div>
+                    </div>
+                    <div class="data-item">
+                        <label>Total Filament Weight</label>
+                        <div class="value" id="extracted-weight">-</div>
+                    </div>
+                    <div class="data-item">
+                        <label>Material Type</label>
+                        <div class="value" id="extracted-material">-</div>
+                    </div>
+                </div>
+                
+                <!-- AMS Badge -->
+                <div id="ams-badge" style="display: none; text-align: center; margin: 20px 0;">
+                    <span style="display: inline-block; background: linear-gradient(135deg, #4CAF50, #45a049); color: white; padding: 10px 20px; border-radius: 20px; font-weight: 700; font-size: 1.1em;">
+                        🎨 AMS Multi-Material Print Detected
+                    </span>
+                </div>
+                
+                <!-- Materials Breakdown (will be populated dynamically) -->
+                <div id="materials-breakdown"></div>
+            </div>
+            
+            <div class="input-section">
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="ams-checkbox" style="width: auto; margin-right: 10px;">
+                        AMS Multi-Material Print
+                    </label>
+                    <p style="font-size: 0.85em; color: #666; margin-top: 5px;">Check if using multiple colors/materials</p>
+                </div>
+                <div class="input-group">
+                    <label>Electricity Rate (SAR/kWh)</label>
+                    <input type="number" id="electricity-rate" value="0.18" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Labor Rate (SAR/hour)</label>
+                    <input type="number" id="labor-rate" value="25">
+                </div>
+                <div class="input-group">
+                    <label>Post-Processing (min)</label>
+                    <input type="number" id="post-processing-time" value="15">
+                </div>
+                <div class="input-group">
+                    <label>Design/Setup (min)</label>
+                    <input type="number" id="design-time" value="30">
+                </div>
+                <div class="input-group">
+                    <label>Failure Rate (%)</label>
+                    <input type="number" id="failed-print-rate" value="5">
+                </div>
+                <div class="input-group">
+                    <label>Material Price (SAR/kg)</label>
+                    <input type="number" id="material-price" value="84">
+                </div>
+            </div>
+            
+            <button class="calculate-btn" id="calcBtn">Calculate Costs</button>
+            
+            <div class="results" id="results">
+                <div class="cost-breakdown">
+                    <div class="cost-item">
+                        <h3>Material</h3>
+                        <div class="amount" id="material-cost">0.00 SAR</div>
+                    </div>
+                    <div class="cost-item" id="waste-cost-item" style="display: none;">
+                        <h3>AMS Switches + Waste</h3>
+                        <div class="amount" id="waste-cost">0.00 SAR</div>
+                    </div>
+                    <div class="cost-item">
+                        <h3>Labor</h3>
+                        <div class="amount" id="labor-cost">0.00 SAR</div>
+                    </div>
+                    <div class="cost-item">
+                        <h3>Electricity</h3>
+                        <div class="amount" id="electricity-cost">0.00 SAR</div>
+                    </div>
+                    <div class="cost-item">
+                        <h3>Failure Risk</h3>
+                        <div class="amount" id="failure-cost">0.00 SAR</div>
+                    </div>
+                    <div class="cost-item">
+                        <h3>Overhead</h3>
+                        <div class="amount" id="overhead-cost">0.00 SAR</div>
+                    </div>
+                    <div class="cost-item" id="ams-overhead-item" style="display: none;">
+                        <h3>AMS Complexity</h3>
+                        <div class="amount" id="ams-overhead-cost">0.00 SAR</div>
+                    </div>
+                </div>
+                
+                <div class="total-cost">
+                    <h2>Total Cost</h2>
+                    <div class="amount" id="total-cost">0.00 SAR</div>
+                </div>
+                
+                <h3 style="text-align:center; margin:20px 0;">Pricing Options</h3>
+                <div class="pricing-options">
+                    <div class="pricing-option">
+                        <h3>Conservative (3x)</h3>
+                        <div class="price" id="price-3x">0 SAR</div>
+                    </div>
+                    <div class="pricing-option recommended">
+                        <h3>Standard (4x)</h3>
+                        <div class="price" id="price-4x">0 SAR</div>
+                    </div>
+                    <div class="pricing-option">
+                        <h3>Premium (5x)</h3>
+                        <div class="price" id="price-5x">0 SAR</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+  <script>
+    var data = {
+        weight: 0, 
+        printTime: 0, 
+        materialType: 'PLA', 
+        layerHeight: 0,
+        isMultiMaterial: false,
+        materials: [],
+        totalMaterials: 0,
+        wasteWeight: 0,
+        toolchangeCount: 0
+    };
+    
+    // Helper function to get color name from hex
+    function getColorName(hex) {
+        if (!hex || hex === '#CCCCCC') return 'Gray';
+        
+        // Convert hex to RGB
+        var r = parseInt(hex.substr(1,2), 16);
+        var g = parseInt(hex.substr(3,2), 16);
+        var b = parseInt(hex.substr(5,2), 16);
+        
+        // Simple color naming based on RGB values
+        if (r > 200 && g > 200 && b > 200) return 'White';
+        if (r < 50 && g < 50 && b < 50) return 'Black';
+        if (r > 200 && g < 100 && b < 100) return 'Red';
+        if (r < 100 && g > 200 && b < 100) return 'Green';
+        if (r < 100 && g < 100 && b > 200) return 'Blue';
+        if (r > 200 && g > 200 && b < 100) return 'Yellow';
+        if (r > 200 && g < 100 && b > 200) return 'Magenta';
+        if (r < 100 && g > 200 && b > 200) return 'Cyan';
+        if (r > 200 && g > 150 && b < 100) return 'Orange';
+        if (r > 150 && g < 100 && b > 150) return 'Purple';
+        if (r > 100 && g > 100 && b < 50) return 'Brown';
+        if (r > 150 && g > 150 && b > 150) return 'Light Gray';
+        if (r < 100 && g < 100 && b < 100) return 'Dark Gray';
+        
+        return hex; // Return hex if no match
+    }
+    
+    var uploadArea = document.getElementById('uploadArea');
+    var fileInput = document.getElementById('file-input');
+    
+    uploadArea.onclick = function() { fileInput.click(); };
+    
+    fileInput.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        if (!file.name.endsWith('.3mf')) {
+            document.getElementById('fileStatus').className = 'file-status error';
+            document.getElementById('fileStatus').textContent = 'Please upload a .3MF file';
+            return;
+        }
+        document.getElementById('fileStatus').className = 'file-status processing';
+        document.getElementById('fileStatus').textContent = 'Parsing 3MF file...';
+        
+        JSZip.loadAsync(file).then(function(zip) {
+            var printTime = 0;
+            var totalWeight = 0;
+            var materialTypes = [];
+            var materialWeights = [];
+            var materialColors = [];
+            var layerHeight = 0;
+            var wasteWeight = 0;
+            
+            // Extract preview image if it exists
+            var previewFiles = Object.keys(zip.files).filter(function(name) {
+                return name.toLowerCase().includes('plate') && 
+                       (name.toLowerCase().endsWith('.png') || name.toLowerCase().endsWith('.jpg'));
+            });
+            
+            if (previewFiles.length > 0) {
+                console.log('Found preview image:', previewFiles[0]);
+                zip.files[previewFiles[0]].async('base64').then(function(base64) {
+                    var ext = previewFiles[0].toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+                    document.getElementById('preview-image').src = 'data:image/' + ext + ';base64,' + base64;
+                    document.getElementById('preview-section').style.display = 'block';
+                });
+            }
+            
+            var gcodeFiles = Object.keys(zip.files).filter(function(name) { 
+                return name.toLowerCase().endsWith('.gcode');
+            });
+            
+            console.log('Found G-code files:', gcodeFiles);
+            
+            if (gcodeFiles.length === 0) {
+                throw new Error('No G-code file found in 3MF');
+            }
+            
+            return zip.files[gcodeFiles[0]].async('string').then(function(gcode) {
+                var lines = gcode.split('\n');
+                var toolchangeCount = 0;
+                var lastToolchangeNum = 0;
+                
+                for (var i = 0; i < Math.min(lines.length, 300); i++) {
+                    var line = lines[i].trim();
+                    
+                    // ; model printing time: 33m 3s; total estimated time: 39m 21s
+                    // ; model printing time: 3h 30m 34s; total estimated time: 3h 36m 50s
+                    if (line.includes('total estimated time:')) {
+                        // Try with hours first
+                        var timeMatch = line.match(/total estimated time:\s*(\d+)h\s*(\d+)m/i);
+                        if (timeMatch) {
+                            printTime = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+                            console.log('Print time (with hours):', printTime, 'minutes');
+                        } else {
+                            // Try without hours (just minutes)
+                            var timeMatchMin = line.match(/total estimated time:\s*(\d+)m/i);
+                            if (timeMatchMin) {
+                                printTime = parseInt(timeMatchMin[1]);
+                                console.log('Print time (minutes only):', printTime, 'minutes');
+                            }
+                        }
+                    }
+                    
+                    // ; total filament weight [g] : 104.83 or 3.02,11.24
+                    if (line.includes('total filament weight [g]')) {
+                        var weightMatch = line.match(/:\s*([\d.,\s]+)/);
+                        if (weightMatch) {
+                            var weightStr = weightMatch[1];
+                            // Check if comma-separated (multi-material)
+                            if (weightStr.includes(',')) {
+                                var weights = weightStr.split(',').map(function(w) { return parseFloat(w.trim()); });
+                                totalWeight = weights.reduce(function(sum, w) { return sum + (isNaN(w) ? 0 : w); }, 0);
+                                console.log('Multi-material weights:', weights, 'Total:', totalWeight + 'g');
+                            } else {
+                                totalWeight = parseFloat(weightStr);
+                                console.log('Single material weight:', totalWeight + 'g');
+                            }
+                        }
+                    }
+                    
+                    // ; filament_type = PLA;PETG;ABS
+                    if (line.match(/^;\s*filament_type\s*=/)) {
+                        var typeMatch = line.match(/=\s*(.+)/);
+                        if (typeMatch) {
+                            var types = typeMatch[1].split(';').map(function(t) { return t.trim(); });
+                            materialTypes = types.filter(function(t) { return t.length > 0; });
+                            console.log('Material types:', materialTypes);
+                        }
+                    }
+                    
+                    // ; model label id: 79,117,137,157,177 - each number represents a material segment
+                    if (line.includes('model label id:')) {
+                        var labelsMatch = line.match(/:\s*(.+)/);
+                        if (labelsMatch) {
+                            var labels = labelsMatch[1].split(',').map(function(l) { return l.trim(); });
+                            // Count unique material segments as indicator of complexity
+                            console.log('Model label segments:', labels.length);
+                        }
+                    }
+                    
+                    // ; filament used [g] = 45.2;32.1;27.5
+                    if (line.includes('filament used [g]')) {
+                        var weightsMatch = line.match(/=\s*(.+)/);
+                        if (weightsMatch) {
+                            var weights = weightsMatch[1].split(/[;,]/).map(function(w) { 
+                                return parseFloat(w.trim()); 
+                            });
+                            materialWeights = weights.filter(function(w) { return !isNaN(w); });
+                            console.log('Material weights:', materialWeights);
+                        }
+                    }
+                    
+                    // ; filament_colour = #FF0000;#00FF00;#0000FF (NOT default_filament_colour)
+                    if (line.match(/^;\s*filament_colour\s*=/)) {
+                        var colorsMatch = line.match(/=\s*(.+)/);
+                        if (colorsMatch) {
+                            materialColors = colorsMatch[1].split(';').map(function(c) { return c.trim(); }).filter(function(c) { return c.length > 0 && c.startsWith('#'); });
+                            console.log('Material colors found:', materialColors);
+                        }
+                    }
+                    
+                    // ; flush_volumes_matrix - used to calculate waste
+                    if (line.includes('flush_volumes_matrix')) {
+                        var flushMatch = line.match(/=\s*(.+)/);
+                        if (flushMatch) {
+                            var volumes = flushMatch[1].split(',').map(function(v) { return parseFloat(v.trim()); });
+                            var totalFlush = volumes.reduce(function(sum, v) { return sum + v; }, 0);
+                            // Estimate waste: flush volume in mm³ to grams (roughly 1.2g/cm³ for PLA)
+                            wasteWeight = (totalFlush / 1000) * 0.0012; // mm³ to cm³ to grams
+                            console.log('Estimated flush waste:', wasteWeight.toFixed(1) + 'g');
+                        }
+                    }
+                    
+                    // ; layer_height = 0.2
+                    if (line.includes('layer_height')) {
+                        var layerMatch = line.match(/[=:]\s*([\d.]+)/);
+                        if (layerMatch) {
+                            layerHeight = parseFloat(layerMatch[1]);
+                            console.log('Layer height:', layerHeight + 'mm');
+                        }
+                    }
+                    
+                    if (line.includes('HEADER_BLOCK_END')) break;
+                }
+                
+                // Find toolchange count from comments: "; toolchange #X"
+                // Format: ; CP TOOLCHANGE START
+                //         ; toolchange #1
+                //         ; material : PLA -> PLA
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    // Look for "; toolchange #X" with flexible spacing
+                    if (line.match(/^;\s*toolchange\s*#\s*(\d+)/i)) {
+                        var toolchangeMatch = line.match(/^;\s*toolchange\s*#\s*(\d+)/i);
+                        if (toolchangeMatch) {
+                            var num = parseInt(toolchangeMatch[1]);
+                            if (num > lastToolchangeNum) {
+                                lastToolchangeNum = num;
+                            }
+                        }
+                    }
+                    // Stop after a reasonable number of lines for performance
+                    if (i > 50000) break;
+                }
+                toolchangeCount = lastToolchangeNum;
+                console.log('Toolchange count (from comments):', toolchangeCount);
+                
+                // Determine if multi-material
+                // Check multiple indicators: material types, material weights, or comma in total weight
+                var hasMultipleTypes = materialTypes.length > 1;
+                var hasMultipleWeights = materialWeights.length > 1;
+                var hasCommaInTotal = totalWeight > 0 && materialWeights.length > 1; // If we parsed multiple weights
+                
+                var isMulti = hasMultipleTypes || hasMultipleWeights || hasCommaInTotal;
+                
+                console.log('AMS Detection - Types:', materialTypes.length, 'Weights:', materialWeights.length, 'Is Multi:', isMulti);
+                
+                // Build materials array
+                var materials = [];
+                var maxMaterials = Math.max(materialTypes.length, materialWeights.length, materialColors.length);
+                console.log('Building materials array - Types:', materialTypes.length, 'Weights:', materialWeights.length, 'Colors:', materialColors.length);
+                
+                // Get unique colors only
+                var uniqueColors = [];
+                var seenColors = {};
+                
+                for (var j = 0; j < materialColors.length; j++) {
+                    var color = materialColors[j];
+                    if (color && color.trim() && color.startsWith('#') && !seenColors[color]) {
+                        seenColors[color] = true;
+                        uniqueColors.push(color);
+                    }
+                }
+                
+                console.log('Unique colors:', uniqueColors);
+                
+                // Build materials array with unique colors
+                for (var j = 0; j < uniqueColors.length; j++) {
+                    materials.push({
+                        type: materialTypes[j] || materialTypes[0] || 'PLA',
+                        weight: materialWeights[j] || 0,
+                        color: uniqueColors[j]
+                    });
+                    console.log('Material', j, '- Type:', materials[j].type, 'Weight:', materials[j].weight, 'Color:', materials[j].color);
+                }
+                
+                // Get layer height from JSON if not in gcode
+                var plateJsonFiles = Object.keys(zip.files).filter(function(n) { 
+                    return n.includes('plate_') && n.endsWith('.json'); 
+                });
+                
+                if (layerHeight === 0 && plateJsonFiles.length > 0) {
+                    return zip.files[plateJsonFiles[0]].async('string').then(function(content) {
+                        var json = JSON.parse(content);
+                        if (json.bbox_objects && json.bbox_objects.length > 0) {
+                            layerHeight = json.bbox_objects[0].layer_height;
+                        }
+                    }).then(function() {
+                        finalizeData();
+                    });
+                } else {
+                    finalizeData();
+                }
+                
+                function finalizeData() {
+                    data.printTime = printTime;
+                    data.weight = totalWeight;
+                    data.materialType = isMulti ? materials[0].type + ' + ' + (materials.length - 1) + ' more' : (materialTypes[0] || 'PLA');
+                    data.layerHeight = layerHeight;
+                    data.isMultiMaterial = isMulti;
+                    data.materials = materials;
+                    data.totalMaterials = materials.length;
+                    data.wasteWeight = wasteWeight;
+                    data.toolchangeCount = toolchangeCount;
+                    
+                    console.log('Final extracted data:', data);
+                    updateDisplay();
+                }
+            });
+            
+        }).then(function() {
+            if (data.weight > 0 && data.printTime > 0) {
+                document.getElementById('fileStatus').className = 'file-status success';
+                document.getElementById('fileStatus').textContent = '✅ File parsed successfully!' + 
+                    (data.isMultiMaterial ? ' (AMS Multi-Material)' : '');
+            } else {
+                document.getElementById('fileStatus').className = 'file-status error';
+                document.getElementById('fileStatus').textContent = '⚠️ Partial data extracted. Check console (F12).';
+            }
+            document.getElementById('extractedData').classList.add('show');
+            calculate();
+        }).catch(function(e) {
+            console.error('Parse error:', e);
+            document.getElementById('fileStatus').className = 'file-status error';
+            document.getElementById('fileStatus').textContent = '❌ Error: ' + e.message;
+        });
+    };
+    
+   function updateDisplay() {
+    var h = Math.floor(data.printTime / 60);
+    var m = data.printTime % 60;
+    document.getElementById('extracted-time').textContent = 
+        data.printTime > 0 ? (h > 0 ? h + 'h ' + m + 'm' : m + 'm') : 'Not found';
+    
+    document.getElementById('extracted-weight').textContent = 
+        data.weight > 0 ? data.weight.toFixed(1) + 'g' : 'Not found';
+    
+    document.getElementById('extracted-material').textContent = data.materialType;
+    
+    // Show/hide AMS badge and auto-check checkbox
+    if (data.isMultiMaterial) {
+        document.getElementById('ams-badge').style.display = 'block';
+        document.getElementById('ams-checkbox').checked = true;
+    } else {
+        document.getElementById('ams-badge').style.display = 'none';
+    }
+    
+    // Display color palette if multi-material
+    if (data.isMultiMaterial && data.materials.length > 0) {
+        var colorSwatchesHtml = '';
+        for (var i = 0; i < data.materials.length; i++) {
+            var mat = data.materials[i];
+            var colorName = getColorName(mat.color);
+            colorSwatchesHtml += '<div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">';
+            colorSwatchesHtml += '<div style="width: 60px; height: 60px; background: ' + mat.color + '; border-radius: 12px; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"></div>';
+            colorSwatchesHtml += '<div style="font-size: 0.85em; color: #666; font-weight: 600;">' + colorName + '</div>';
+            colorSwatchesHtml += '<div style="font-size: 0.75em; color: #999;">' + mat.type + '</div>';
+            colorSwatchesHtml += '</div>';
+        }
+        document.getElementById('color-swatches').innerHTML = colorSwatchesHtml;
+        document.getElementById('color-palette').style.display = 'block';
+    } else {
+        document.getElementById('color-palette').style.display = 'none';
+    }
+    
+    // Show AMS materials breakdown
+    if (data.isMultiMaterial && data.materials.length > 0) {
+        var materialsHtml = '<div style="margin-top: 20px; padding: 25px; background: white; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">';
+        materialsHtml += '<h4 style="color: #4CAF50; margin-bottom: 20px; font-size: 1.3em;">🎨 AMS Materials Breakdown</h4>';
+        
+        for (var i = 0; i < data.materials.length; i++) {
+            var mat = data.materials[i];
+            var percentage = ((mat.weight / data.weight) * 100).toFixed(1);
+            
+            materialsHtml += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; background: linear-gradient(to right, ' + mat.color + '10, transparent);">';
+            materialsHtml += '<span style="display: flex; align-items: center; flex: 1;">';
+            materialsHtml += '<span style="width: 30px; height: 30px; background: ' + mat.color + '; border-radius: 50%; margin-right: 15px; border: 3px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></span>';
+            materialsHtml += '<strong>Material ' + (i + 1) + ':</strong> &nbsp;' + mat.type + '</span>';
+            materialsHtml += '<span style="font-size: 1.2em;"><strong>' + mat.weight.toFixed(1) + 'g</strong> <span style="color: #666; font-size: 0.9em;">(' + percentage + '%)</span></span>';
+            materialsHtml += '</div>';
+        }
+        
+        if (data.wasteWeight > 0) {
+            materialsHtml += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fff3cd; border-radius: 10px; margin-top: 15px;">';
+            materialsHtml += '<span style="color: #856404; font-weight: 600;">⚠️ Estimated Waste (Purging/Switching)</span>';
+            materialsHtml += '<span style="color: #856404; font-weight: 700; font-size: 1.2em;">' + data.wasteWeight.toFixed(1) + 'g</span>';
+            materialsHtml += '</div>';
+        }
+        
+        if (data.toolchangeCount > 0) {
+            materialsHtml += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #e3f2fd; border-radius: 10px; margin-top: 10px;">';
+            materialsHtml += '<span style="color: #1976d2; font-weight: 600;">🔄 Material Switches</span>';
+            materialsHtml += '<span style="color: #1976d2; font-weight: 700; font-size: 1.2em;">' + data.toolchangeCount + ' times</span>';
+            materialsHtml += '</div>';
+        }
+        
+        materialsHtml += '</div>';
+        
+        document.getElementById('materials-breakdown').innerHTML = materialsHtml;
+    } else {
+        document.getElementById('materials-breakdown').innerHTML = '';
+    }
+}
+   function calculate() {
+    var weight = data.weight || 60;
+    var hours = (data.printTime || 169) / 60;
+    var elecRate = parseFloat(document.getElementById('electricity-rate').value);
+    var laborRate = parseFloat(document.getElementById('labor-rate').value);
+    var postTime = parseFloat(document.getElementById('post-processing-time').value);
+    var designTime = parseFloat(document.getElementById('design-time').value);
+    var failRate = parseFloat(document.getElementById('failed-print-rate').value);
+    var matPrice = parseFloat(document.getElementById('material-price').value);
+    
+    // Check manual AMS override checkbox
+    var amsCheckbox = document.getElementById('ams-checkbox');
+    var isAMS = amsCheckbox.checked || data.isMultiMaterial;
+    
+    // Calculate AMS overhead and waste
+    var amsOverhead = 0;
+    var wasteCost = 0;
+    var toolchangeCost = 0;
+    
+    if (isAMS) {
+        // Cost per toolchange/color switch: 0.5 SAR each
+        toolchangeCost = (data.toolchangeCount || 0) * 0.5;
+        
+        // Material waste cost from purging
+        wasteCost = data.wasteWeight > 0 ? (data.wasteWeight / 1000) * matPrice : 0;
+        
+        // Total AMS overhead = toolchange cost + waste cost
+        amsOverhead = toolchangeCost + wasteCost;
+        
+        // Show AMS cost items
+        document.getElementById('waste-cost-item').style.display = 'block';
+        document.getElementById('ams-overhead-item').style.display = 'none'; // Hide separate overhead item
+    } else {
+        // Hide AMS cost items
+        document.getElementById('waste-cost-item').style.display = 'none';
+        document.getElementById('ams-overhead-item').style.display = 'none';
+    }
+    
+    var matCost = (weight / 1000) * matPrice;
+    var elecCost = hours * 0.15 * elecRate;
+    var laborCost = ((postTime + designTime) / 60) * laborRate;
+    var overhead = hours <= 2 ? 0.37 : hours <= 6 ? 0.56 : hours <= 12 ? 0.94 : 1.31;
+    var base = matCost + amsOverhead + elecCost + laborCost + overhead;
+    var failCost = base * failRate / 100;
+    var total = base + failCost;
+    
+    document.getElementById('material-cost').textContent = matCost.toFixed(2) + ' SAR';
+    
+    // Display combined AMS waste (material waste + toolchange costs)
+    if (isAMS && amsOverhead > 0) {
+        var wasteText = amsOverhead.toFixed(2) + ' SAR';
+        if (data.toolchangeCount > 0) {
+            wasteText += ' (' + data.toolchangeCount + ' switches × 0.5 SAR';
+            if (wasteCost > 0) {
+                wasteText += ' + ' + wasteCost.toFixed(2) + ' SAR waste)';
+            } else {
+                wasteText += ')';
+            }
+        }
+        document.getElementById('waste-cost').textContent = wasteText;
+    } else {
+        document.getElementById('waste-cost').textContent = '0.00 SAR';
+    }
+    document.getElementById('labor-cost').textContent = laborCost.toFixed(2) + ' SAR';
+    document.getElementById('electricity-cost').textContent = elecCost.toFixed(2) + ' SAR';
+    document.getElementById('failure-cost').textContent = failCost.toFixed(2) + ' SAR';
+    document.getElementById('overhead-cost').textContent = overhead.toFixed(2) + ' SAR';
+    document.getElementById('total-cost').textContent = total.toFixed(2) + ' SAR';
+    
+    document.getElementById('price-3x').textContent = (total * 3).toFixed(2) + ' SAR';
+    document.getElementById('price-4x').textContent = (total * 4).toFixed(2) + ' SAR';
+    document.getElementById('price-5x').textContent = (total * 5).toFixed(2) + ' SAR';
+    
+    document.getElementById('results').classList.add('show');
+}
+    document.getElementById('calcBtn').onclick = calculate;
+    
+    // Add specific listener for AMS checkbox
+    document.getElementById('ams-checkbox').onchange = function() { 
+        if (data.weight > 0) calculate(); 
+    };
+    
+    document.querySelectorAll('input').forEach(function(el) {
+        el.oninput = function() { if (data.weight > 0) calculate(); };
+    });
+</script>
+</body>
+</html>
