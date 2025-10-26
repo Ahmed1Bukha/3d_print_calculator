@@ -90,6 +90,17 @@
                 </div>
                 <input type="file" id="file-input" accept=".3mf">
                 <div class="file-status" id="fileStatus"></div>
+                
+                <!-- File Info Display -->
+                <div id="file-info" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.2); border-radius: 10px; color: white; text-align: left;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <span style="font-size: 1.5em;">📄</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700; font-size: 1.1em;" id="file-name"></div>
+                            <div style="font-size: 0.9em; opacity: 0.9; font-family: monospace; word-break: break-all;" id="file-path"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Preview Image -->
@@ -277,6 +288,23 @@
             document.getElementById('fileStatus').textContent = 'Please upload a .3MF file';
             return;
         }
+        
+        // Display file information
+        document.getElementById('file-name').textContent = file.name;
+        
+        // Display file size
+        var fileSize = '';
+        if (file.size < 1024) {
+            fileSize = file.size + ' B';
+        } else if (file.size < 1024 * 1024) {
+            fileSize = (file.size / 1024).toFixed(1) + ' KB';
+        } else {
+            fileSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        
+        document.getElementById('file-path').textContent = 'Size: ' + fileSize + ' • Uploaded: ' + new Date().toLocaleTimeString();
+        document.getElementById('file-info').style.display = 'block';
+        
         document.getElementById('fileStatus').className = 'file-status processing';
         document.getElementById('fileStatus').textContent = 'Parsing 3MF file...';
         
@@ -288,6 +316,25 @@
             var materialColors = [];
             var layerHeight = 0;
             var wasteWeight = 0;
+            var objectName = '';
+            
+            // Try to get object name from metadata
+            var metadataFiles = Object.keys(zip.files).filter(function(name) {
+                return name.toLowerCase().includes('metadata') || name === 'Metadata/model_settings.config';
+            });
+            
+            if (metadataFiles.length > 0) {
+                zip.files[metadataFiles[0]].async('string').then(function(content) {
+                    // Try to extract model name from metadata
+                    var nameMatch = content.match(/name["\s:=]+([^"\n;]+)/i);
+                    if (nameMatch) {
+                        objectName = nameMatch[1].trim();
+                        console.log('Object name from metadata:', objectName);
+                    }
+                }).catch(function(e) {
+                    console.log('Could not read metadata:', e);
+                });
+            }
             
             // Extract preview image if it exists
             var previewFiles = Object.keys(zip.files).filter(function(name) {
