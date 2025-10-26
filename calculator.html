@@ -324,20 +324,32 @@
                     
                     // ; model printing time: 33m 3s; total estimated time: 39m 21s
                     // ; model printing time: 3h 30m 34s; total estimated time: 3h 36m 50s
+                    // ; model printing time: 1d 17h 0m 25s; total estimated time: 1d 17h 7m 19s
                     if (line.includes('total estimated time:')) {
-                        // Try with hours first
-                        var timeMatch = line.match(/total estimated time:\s*(\d+)h\s*(\d+)m/i);
-                        if (timeMatch) {
-                            printTime = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
-                            console.log('Print time (with hours):', printTime, 'minutes');
-                        } else {
-                            // Try without hours (just minutes)
-                            var timeMatchMin = line.match(/total estimated time:\s*(\d+)m/i);
-                            if (timeMatchMin) {
-                                printTime = parseInt(timeMatchMin[1]);
-                                console.log('Print time (minutes only):', printTime, 'minutes');
-                            }
+                        var timeStr = line.split('total estimated time:')[1].trim();
+                        var days = 0, hours = 0, minutes = 0;
+                        
+                        // Extract days if present
+                        var daysMatch = timeStr.match(/(\d+)d/);
+                        if (daysMatch) {
+                            days = parseInt(daysMatch[1]);
                         }
+                        
+                        // Extract hours if present
+                        var hoursMatch = timeStr.match(/(\d+)h/);
+                        if (hoursMatch) {
+                            hours = parseInt(hoursMatch[1]);
+                        }
+                        
+                        // Extract minutes if present
+                        var minutesMatch = timeStr.match(/(\d+)m/);
+                        if (minutesMatch) {
+                            minutes = parseInt(minutesMatch[1]);
+                        }
+                        
+                        // Convert everything to minutes: (days * 24 * 60) + (hours * 60) + minutes
+                        printTime = (days * 24 * 60) + (hours * 60) + minutes;
+                        console.log('Print time:', days + 'd', hours + 'h', minutes + 'm', '=', printTime, 'minutes total');
                     }
                     
                     // ; total filament weight [g] : 104.83 or 3.02,11.24
@@ -538,8 +550,23 @@
    function updateDisplay() {
     var h = Math.floor(data.printTime / 60);
     var m = data.printTime % 60;
-    document.getElementById('extracted-time').textContent = 
-        data.printTime > 0 ? (h > 0 ? h + 'h ' + m + 'm' : m + 'm') : 'Not found';
+    
+    // Display time in hours for better readability
+    var timeText = '';
+    if (data.printTime > 0) {
+        if (h > 0) {
+            timeText = h + 'h';
+            if (m > 0) {
+                timeText += ' ' + m + 'm';
+            }
+        } else {
+            timeText = m + 'm';
+        }
+    } else {
+        timeText = 'Not found';
+    }
+    
+    document.getElementById('extracted-time').textContent = timeText;
     
     document.getElementById('extracted-weight').textContent = 
         data.weight > 0 ? data.weight.toFixed(1) + 'g' : 'Not found';
