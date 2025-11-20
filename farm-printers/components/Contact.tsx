@@ -2,6 +2,10 @@
 
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -68,9 +72,9 @@ export default function Contact() {
             {/* Contact Cards */}
             <div className="space-y-4">
               {contactInfo.map((info, index) => (
-                <div
+                <Card
                   key={index}
-                  className="group flex items-center gap-4 p-6 bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                  className="group flex items-center gap-4 p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
                 >
                   <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${info.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <info.icon size={24} className="text-white" />
@@ -79,7 +83,7 @@ export default function Contact() {
                     <div className="text-sm font-medium text-gray-500">{info.title}</div>
                     <div className="text-lg font-bold text-gray-900">{info.value}</div>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
 
@@ -90,7 +94,7 @@ export default function Contact() {
           </div>
 
           {/* Contact Form */}
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <Card className="p-8 shadow-xl">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">
               أرسل لنا رسالة
             </h3>
@@ -99,14 +103,14 @@ export default function Contact() {
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   الاسم الكامل
                 </label>
-                <input
+                <Input
                   type="text"
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   placeholder="أدخل اسمك"
                   required
+                  className="h-11"
                 />
               </div>
 
@@ -114,14 +118,14 @@ export default function Contact() {
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   البريد الإلكتروني
                 </label>
-                <input
+                <Input
                   type="email"
                   id="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   placeholder="your@email.com"
                   required
+                  className="h-11"
                 />
               </div>
 
@@ -129,14 +133,14 @@ export default function Contact() {
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                   رقم الهاتف
                 </label>
-                <input
+                <Input
                   type="tel"
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   placeholder="+966 50 123 4567"
                   required
+                  className="h-11"
                 />
               </div>
 
@@ -144,26 +148,27 @@ export default function Contact() {
                 <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
                   رسالتك
                 </label>
-                <textarea
+                <Textarea
                   id="message"
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   rows={5}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all resize-none"
                   placeholder="اكتب رسالتك هنا..."
                   required
+                  className="resize-none"
                 />
               </div>
 
-              <button
+              <Button
                 type="submit"
-                className="w-full px-6 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+                size="lg"
+                className="w-full text-lg transform hover:scale-105"
               >
                 إرسال الرسالة
                 <Send size={20} />
-              </button>
+              </Button>
             </form>
-          </div>
+          </Card>
         </div>
       </div>
     </section>

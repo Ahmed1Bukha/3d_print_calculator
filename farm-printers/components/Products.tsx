@@ -1,6 +1,9 @@
 'use client';
 
 import { ExternalLink } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export default function Products() {
   const products = [
@@ -55,9 +58,9 @@ export default function Products() {
         {/* Products Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
           {products.map((product, index) => (
-            <div
+            <Card
               key={product.id}
-              className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+              className="group relative overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border-2"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Product Image Container */}
@@ -72,13 +75,13 @@ export default function Products() {
                   </div>
                 </div>
                 {/* Badge */}
-                <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                <Badge className="absolute top-4 right-4 shadow-lg">
                   جديد
-                </div>
+                </Badge>
               </div>
 
               {/* Product Details */}
-              <div className="p-6">
+              <CardContent className="p-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
                   {product.title}
                 </h3>
@@ -87,29 +90,30 @@ export default function Products() {
                 </p>
 
                 {/* Features */}
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2">
                   {product.features.map((feature, idx) => (
-                    <span
+                    <Badge
                       key={idx}
-                      className="px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-sm font-medium"
+                      variant="secondary"
+                      className="bg-orange-50 text-orange-700 hover:bg-orange-100"
                     >
                       {feature}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
+              </CardContent>
 
-                {/* Price and CTA */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <div className="text-3xl font-bold text-orange-600">
-                    {product.price}
-                  </div>
-                  <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-full font-bold hover:shadow-lg transition-all transform hover:scale-105">
-                    المزيد
-                    <ExternalLink size={18} />
-                  </button>
+              {/* Price and CTA */}
+              <CardFooter className="flex items-center justify-between pt-4 border-t">
+                <div className="text-3xl font-bold text-orange-600">
+                  {product.price}
                 </div>
-              </div>
-            </div>
+                <Button className="rounded-full transform hover:scale-105">
+                  المزيد
+                  <ExternalLink size={18} />
+                </Button>
+              </CardFooter>
+            </Card>
           ))}
         </div>
       </div>

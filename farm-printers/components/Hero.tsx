@@ -1,6 +1,8 @@
 'use client';
 
 import { ArrowLeft, Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export default function Hero() {
   return (
@@ -18,12 +20,12 @@ export default function Hero() {
         {/* Main Content */}
         <div className="space-y-8 animate-fade-in">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-orange-200">
+          <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm shadow-lg border-orange-200">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
             <span className="text-sm font-medium text-gray-700">
               رائدون في الطباعة ثلاثية الأبعاد للمزارع
             </span>
-          </div>
+          </Badge>
 
           {/* Main Heading */}
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
@@ -43,17 +45,24 @@ export default function Hero() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
-            <a
-              href="#products"
-              className="group px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+            <Button
+              asChild
+              size="xl"
+              className="group rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105"
             >
-              اكتشف منتجاتنا
-              <ArrowLeft className="group-hover:translate-x-1 transition-transform" size={20} />
-            </a>
-            <button className="group px-8 py-4 bg-white/90 backdrop-blur-sm text-gray-800 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 border border-gray-200">
+              <a href="#products">
+                اكتشف منتجاتنا
+                <ArrowLeft className="group-hover:translate-x-1 transition-transform" size={20} />
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              size="xl"
+              className="group rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
               <Play size={20} className="text-orange-500" />
               شاهد الفيديو
-            </button>
+            </Button>
           </div>
 
           {/* Stats */}

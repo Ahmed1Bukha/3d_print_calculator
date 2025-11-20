@@ -1,6 +1,7 @@
 'use client';
 
 import { Package, Truck, Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function Services() {
   const services = [
@@ -74,12 +75,16 @@ export default function Services() {
 
         {/* CTA Section */}
         <div className="mt-16 text-center">
-          <a
-            href="#contact"
-            className="inline-block px-8 py-4 bg-white text-red-900 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+          <Button
+            asChild
+            size="xl"
+            variant="outline"
+            className="bg-white text-red-900 hover:bg-gray-100 rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105"
           >
-            احصل على استشارة مجانية
-          </a>
+            <a href="#contact">
+              احصل على استشارة مجانية
+            </a>
+          </Button>
         </div>
       </div>
     </section>
